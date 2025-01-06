@@ -8,12 +8,7 @@ using Move = ChessChallenge.API.Move;
 // TODO: Upgrade to .NET 9 for better performance
 public class MyBot : IChessBot
 {
-    public Move Think(Board board, Timer timer)
-    {
-        Move move = MiniMax(board, 6);
-        Console.WriteLine(timer.MillisecondsElapsedThisTurn);
-        return move;
-    }
+    public Move Think(Board board, Timer timer) => MiniMax(board, 6);
 
     private Move MiniMax(Board board, int depth)
     {
