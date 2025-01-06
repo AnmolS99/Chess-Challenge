@@ -4,6 +4,7 @@ using ChessChallenge.API;
 using Board = ChessChallenge.API.Board;
 using Move = ChessChallenge.API.Move;
 
+// TODO: Upgrade to .NET 9 for better performance
 public class MyBot : IChessBot
 {
     public Move Think(Board board, Timer timer) => MiniMax(board, 5);
@@ -12,7 +13,7 @@ public class MyBot : IChessBot
     {
         bool isMyBotWhite = board.IsWhiteToMove;
         
-        Move[] moves = board.GetLegalMoves();
+        Move[] moves = board.GetLegalMoves(); // TODO: Sort so that capture moves come first 
 
         int alpha = int.MinValue;
         int beta = int.MaxValue;
@@ -77,7 +78,7 @@ public class MyBot : IChessBot
             return EvaluateBoardState(board);
 
         int minValue = int.MaxValue;
-        foreach (Move move in board.GetLegalMoves())
+        foreach (Move move in board.GetLegalMoves()) // TODO: Sort so that capture moves come first
         {
             board.MakeMove(move);
             // Take the lowest of the current minValue and the maximum value the child node (opponent) can achieve
@@ -109,7 +110,7 @@ public class MyBot : IChessBot
             return EvaluateBoardState(board);
 
         int maxValue = int.MinValue;
-        foreach (Move move in board.GetLegalMoves())
+        foreach (Move move in board.GetLegalMoves()) // TODO: Sort so that capture moves come first
         {
             board.MakeMove(move);
             // Take the highest of the current maxValue and the minimum value the child node (opponent) can achieve
