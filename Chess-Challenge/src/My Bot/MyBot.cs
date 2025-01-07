@@ -5,7 +5,6 @@ using ChessChallenge.API;
 using Board = ChessChallenge.API.Board;
 using Move = ChessChallenge.API.Move;
 
-// TODO: Upgrade to .NET 9 for better performance
 public class MyBot : IChessBot
 {
     public Move Think(Board board, Timer timer) => MiniMax(board, 6);
