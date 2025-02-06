@@ -8,8 +8,11 @@ using System.Runtime.ExceptionServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using ChessChallenge.API;
 using static ChessChallenge.Application.Settings;
 using static ChessChallenge.Application.ConsoleHelper;
+using Board = ChessChallenge.Chess.Board;
+using Move = ChessChallenge.Chess.Move;
 
 namespace ChessChallenge.Application
 {
@@ -453,6 +456,17 @@ namespace ChessChallenge.Application
         public void Release()
         {
             boardUI.Release();
+        }
+        
+        public static IChessBot? CreateBot(PlayerType type)
+        {
+            return type switch
+            {
+                PlayerType.MyBot => new MyBot(),
+                PlayerType.EvilBot => new EvilBot(),
+                // If you have other bot types, you can add them here as well
+                _ => null
+            };
         }
     }
 }
