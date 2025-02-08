@@ -10,15 +10,11 @@ namespace ChessChallenge.UCI
         IChessBot bot;
         ChallengeController.PlayerType type;
         Chess.Board board;
-        APIMoveGen moveGen;
-
-        static readonly string defaultFen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 
 		public UCIBot(IChessBot bot, ChallengeController.PlayerType type)
         {
             this.bot = bot;
             this.type = type;
-            moveGen = new APIMoveGen();
             board = new Chess.Board();
         }
 
@@ -99,7 +95,7 @@ namespace ChessChallenge.UCI
                     Console.WriteLine("uciok");
                     break;
                 case "ucinewgame":
-                    bot = ChallengeController.CreateBot(type);
+                    bot = ChallengeController.CreateBot(type) ?? new MyBot();
                     break;
                 case "position":
                     PositionCommand(tokens);
@@ -117,10 +113,15 @@ namespace ChessChallenge.UCI
         {
             while (true)
             {
-                string line = Console.ReadLine();
+                string? line = Console.ReadLine();
+                
+                if (String.IsNullOrEmpty(line))
+                    continue;
 
                 if (line == "quit" || line == "exit")
                     return;
+                
+                
                 ExecCommand(line);
             }
         }
