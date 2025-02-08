@@ -1,54 +1,220 @@
-﻿using ChessChallenge.API;
-using System;
+﻿using System;
+using System.Linq;
+using System.Numerics;
+using ChessChallenge.API;
+using Board = ChessChallenge.API.Board;
+using Move = ChessChallenge.API.Move;
 
-namespace ChessChallenge.Example
+namespace ChessChallenge.Example;
+
+public class EvilBot : IChessBot
 {
-    // A simple bot that can spot mate in one, and always captures the most valuable piece it can.
-    // Plays randomly otherwise.
-    public class EvilBot : IChessBot
+    public Move Think(Board board, Timer timer) => MiniMax(board, 6);
+
+    private Move MiniMax(Board board, int depth)
     {
-        // Piece values: null, pawn, knight, bishop, rook, queen, king
-        int[] pieceValues = { 0, 100, 300, 300, 500, 900, 10000 };
+        bool isMyBotWhite = board.IsWhiteToMove;
+        
+        Move[] moves = board.GetLegalMoves().OrderByDescending(move => move.IsCapture).ToArray();
 
-        public Move Think(Board board, Timer timer)
+        int alpha = int.MinValue;
+        int beta = int.MaxValue;
+
+        if (isMyBotWhite)
         {
-            Move[] allMoves = board.GetLegalMoves();
+            Move? maxValueMove = null;
+            int maxValue = int.MinValue;
 
-            // Pick a random move to play if nothing better is found
-            Random rng = new();
-            Move moveToPlay = allMoves[rng.Next(allMoves.Length)];
-            int highestValueCapture = 0;
-
-            foreach (Move move in allMoves)
+            foreach (Move move in moves)
             {
-                // Always play checkmate in one
-                if (MoveIsCheckmate(board, move))
+                board.MakeMove(move);
+                int minValue = MinValue(board, depth - 1, alpha, beta);
+                board.UndoMove(move);
+
+                if (minValue > maxValue || maxValueMove is null)
                 {
-                    moveToPlay = move;
-                    break;
+                    maxValue = minValue;
+                    maxValueMove = move;
                 }
 
-                // Find highest value capture
-                Piece capturedPiece = board.GetPiece(move.TargetSquare);
-                int capturedPieceValue = pieceValues[(int)capturedPiece.PieceType];
-
-                if (capturedPieceValue > highestValueCapture)
-                {
-                    moveToPlay = move;
-                    highestValueCapture = capturedPieceValue;
-                }
+                alpha = Math.Max(alpha, minValue);
             }
 
-            return moveToPlay;
+            return maxValueMove ?? moves[0];
         }
-
-        // Test if this move gives checkmate
-        bool MoveIsCheckmate(Board board, Move move)
+        else
         {
-            board.MakeMove(move);
-            bool isMate = board.IsInCheckmate();
-            board.UndoMove(move);
-            return isMate;
+            Move? minValueMove = null;
+            int minValue = int.MaxValue;
+
+            foreach (Move move in moves)
+            {
+                board.MakeMove(move);
+                int maxValue = MaxValue(board, depth - 1, alpha, beta);
+                board.UndoMove(move);
+
+                if (maxValue < minValue || minValueMove is null)
+                {
+                    minValue = maxValue;
+                    minValueMove = move;
+                }
+
+                beta = Math.Min(beta, maxValue);
+            }
+
+            return minValueMove ?? moves[0];
         }
     }
+    
+    /*
+     * Function for finding the lowest value possible (given optimal play) from the current board state.
+     * Searches "depth" moves ahead.
+     */
+    private int MinValue(Board board, int depth, int alpha, int beta)
+    {
+        if (board.IsDraw())
+            return 0;
+        if (board.IsInCheckmate())
+            return board.IsWhiteToMove ? int.MinValue : int.MaxValue;
+        if (depth == 0)
+            return EvaluateBoardState(board);
+
+        int minValue = int.MaxValue;
+        foreach (Move move in board.GetLegalMoves().OrderByDescending(move => move.IsCapture).ToArray())
+        {
+            board.MakeMove(move);
+            // Take the lowest of the current minValue and the maximum value the child node (opponent) can achieve
+            minValue = Math.Min(minValue, MaxValue(board, depth - 1, alpha, beta));
+            board.UndoMove(move);
+            
+            // If minValue is lower or equal to alpha (the current best move white has)
+            // There is no point in searching through any more moves, as this means white
+            // has an equal or better move already
+            if (minValue <= alpha)
+                return minValue;
+            
+            beta = Math.Min(minValue, beta);
+        }
+        return minValue;
+    }
+
+    /*
+     * Function for finding the highest value possible (given optimal play) from the current board state.
+     * Searches "depth" moves ahead.
+     */
+    private int MaxValue(Board board, int depth, int alpha, int beta)
+    {
+        if (board.IsDraw())
+            return 0;
+        if (board.IsInCheckmate())
+            return board.IsWhiteToMove ? int.MinValue : int.MaxValue;
+        if (depth == 0)
+            return EvaluateBoardState(board);
+
+        int maxValue = int.MinValue;
+        foreach (Move move in board.GetLegalMoves().OrderByDescending(move => move.IsCapture).ToArray())
+        {
+            board.MakeMove(move);
+            // Take the highest of the current maxValue and the minimum value the child node (opponent) can achieve
+            maxValue = Math.Max(maxValue, MinValue(board, depth - 1, alpha, beta));
+            board.UndoMove(move);
+            
+            // If maxValue is higher or equal to beta (the current best move black has)
+            // There is no point in searching through any more moves, as this means black
+            // has an equal or better move already.
+            if (maxValue >= beta)
+                return maxValue;
+            alpha = Math.Max(maxValue, alpha);
+        }
+        return maxValue;
+    }
+
+    private int EvaluateBoardState(Board board)
+    {
+        int[] pieceValues = {0, 1000, 3000, 3500, 5000, 9000};
+        
+        // The value of all white pieces minus the value of all black pieces
+        int totalBoardValue = 0;
+        
+        for (int pieceInt = 1; pieceInt < 6; pieceInt++)
+        {
+            // Number of white pieces of this type minus number of black pieces of this type
+            int relativeNumWhitePieces = 
+                BitOperations.PopCount(board.GetPieceBitboard((PieceType) pieceInt, true)) - 
+                BitOperations.PopCount(board.GetPieceBitboard((PieceType) pieceInt, false));
+            totalBoardValue += relativeNumWhitePieces * pieceValues[pieceInt];
+        }
+        return totalBoardValue;
+    }
+
+    private int[,,] pieceEvalTable =
+    {
+        // Pawns
+        {
+            { 0,  0,  0,  0,  0,  0,  0,  0 },
+            { 50, 50, 50, 50, 50, 50, 50, 50 },
+            { 10, 10, 20, 30, 30, 20, 10, 10 },
+            { 5,  5, 10, 25, 25, 10,  5,  5 },
+            { 0,  0,  0, 20, 20,  0,  0,  0 },
+            { 5, -5, -10, 0,  0, -10, -5, 5 },
+            { 5, 10, 10, -20, -20, 10, 10, 5 },
+            { 0,  0,  0,  0,  0,  0,  0,  0 }
+        },
+        // Knights
+        {
+            { -50,-40,-30,-30,-30,-30,-40,-50 },
+            { -40,-20,  0,  0,  0,  0,-20,-40 },
+            { -30,  0, 10, 15, 15, 10,  0,-30 },
+            { -30,  5, 15, 20, 20, 15,  5,-30 },
+            { -30,  0, 15, 20, 20, 15,  0,-30 },
+            { -30,  5, 10, 15, 15, 10,  5,-30 },
+            { -40,-20,  0,  5,  5,  0,-20,-40 },
+            { -50,-40,-30,-30,-30,-30,-40,-50 }
+        },
+        // Bishop
+        {
+            { -20,-10,-10,-10,-10,-10,-10,-20 },
+            { -10,  0,  0,  0,  0,  0,  0,-10 },
+            { -10,  0,  5, 10, 10,  5,  0,-10 },
+            { -10,  5,  5, 10, 10,  5,  5,-10 },
+            { -10,  0, 10, 10, 10, 10,  0,-10 },
+            { -10, 10, 10, 10, 10, 10, 10,-10 },
+            { -10,  5,  0,  0,  0,  0,  5,-10 },
+            { -20,-10,-10,-10,-10,-10,-10,-20 }
+        },
+        // Rook
+        {
+            { 0,  0,  0,  0,  0,  0,  0,  0 },
+            { 5, 10, 10, 10, 10, 10, 10,  5 },
+            { -5,  0,  0,  0,  0,  0,  0, -5 },
+            { -5,  0,  0,  0,  0,  0,  0, -5 },
+            { -5,  0,  0,  0,  0,  0,  0, -5 },
+            { -5,  0,  0,  0,  0,  0,  0, -5, },
+            { -5,  0,  0,  0,  0,  0,  0, -5, },
+            { 0,  0,  0,  5,  5,  0,  0,  0 }
+        },
+        // Queen
+        {
+            { -20,-10,-10, -5, -5,-10,-10,-20 },
+            { -10,  0,  0,  0,  0,  0,  0,-10 },
+            { -10,  0,  5,  5,  5,  5,  0,-10 },
+            { -5,  0,  5,  5,  5,  5,  0, -5 },
+            { -5,  0,  0,  0,  0,  0,  0, -5 },
+            { -5,  0,  0,  0,  0,  0,  0, -5, },
+            { -5,  0,  0,  0,  0,  0,  0, -5, },
+            { 0,  0,  0,  5,  5,  0,  0,  0 }
+        },
+        // King
+        {
+            { -30,-40,-40,-50,-50,-40,-40,-30 },
+            { -30,-40,-40,-50,-50,-40,-40,-30 },
+            { -30,-40,-40,-50,-50,-40,-40,-30 },
+            { -30,-40,-40,-50,-50,-40,-40,-30 },
+            { -20,-30,-30,-40,-40,-30,-30,-20 },
+            { -10,-20,-20,-20,-20,-20,-20,-10 },
+            { 20, 20,  0,  0,  0,  0, 20, 20 },
+            { 20, 30, 10,  0,  0, 10, 30, 20 }
+        }
+        
+    };
 }

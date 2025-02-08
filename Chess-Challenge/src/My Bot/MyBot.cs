@@ -98,7 +98,7 @@ public class MyBot : IChessBot
 
     /*
      * Function for finding the highest value possible (given optimal play) from the current board state.
-     * Searches "depth" moves ahead.
+     * Searches "depth" moves (ply) ahead.
      */
     private int MaxValue(Board board, int depth, int alpha, int beta)
     {
@@ -129,23 +129,58 @@ public class MyBot : IChessBot
 
     private int EvaluateBoardState(Board board)
     {
-        int[] pieceValues = {0, 1000, 3000, 3500, 5000, 9000};
         
-        // The value of all white pieces minus the value of all black pieces
+        int[] pieceValues = [1000, 3000, 3500, 5000, 9000];
+        
         int totalBoardValue = 0;
         
-        for (int pieceInt = 1; pieceInt < 6; pieceInt++)
+        for (int pieceInt = 1; pieceInt < 7; pieceInt++)
         {
-            // Number of white pieces of this type minus number of black pieces of this type
-            int relativeNumWhitePieces = 
-                BitOperations.PopCount(board.GetPieceBitboard((PieceType) pieceInt, true)) - 
-                BitOperations.PopCount(board.GetPieceBitboard((PieceType) pieceInt, false));
-            totalBoardValue += relativeNumWhitePieces * pieceValues[pieceInt];
+            // No point calculating material difference for king
+            if (pieceInt != 6)
+            {
+                // Number of white pieces of this type minus number of black pieces of this type
+                int relativeNumWhitePieces = 
+                    BitOperations.PopCount(board.GetPieceBitboard((PieceType) pieceInt, true)) - 
+                    BitOperations.PopCount(board.GetPieceBitboard((PieceType) pieceInt, false));
+                
+                totalBoardValue += relativeNumWhitePieces * pieceValues[pieceInt - 1];
+            }
+            
+            // Compute sum of positional values for white
+            ulong mask = board.GetPieceBitboard((PieceType)pieceInt, true);
+
+            while (mask != 0)
+            {
+                int bitIndex = BitOperations.TrailingZeroCount(mask); // Get index of the least significant set bit
+
+                mask &= mask - 1; // Clear the least significant bit
+
+                int row = 7 - bitIndex / 8;
+                int col = bitIndex % 8;
+
+                totalBoardValue += _pieceEvalTable[pieceInt - 1, row, col];
+            }
+            
+            // Compute sum of positional values for black
+            mask = board.GetPieceBitboard((PieceType)pieceInt, false);
+
+            while (mask != 0)
+            {
+                int bitIndex = BitOperations.TrailingZeroCount(mask); // Get index of the least significant set bit
+
+                mask &= mask - 1; // Clear the least significant bit
+                
+                int row = bitIndex / 8;
+                int col = 7 - bitIndex % 8;
+
+                totalBoardValue -= _pieceEvalTable[pieceInt - 1, row, col];
+            }
         }
         return totalBoardValue;
     }
 
-    private int[,,] pieceEvalTable =
+    private readonly int[,,] _pieceEvalTable =
     {
         // Pawns
         {
