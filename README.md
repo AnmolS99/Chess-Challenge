@@ -13,3 +13,5 @@ than the one I created in Python.
 * Try building and running the project.
   * If a window with a chess board appears — great!
   * If it doesn't work, take a look at the FAQ/troubleshooting section at the bottom of the original repo README page. You can also search the [issues page](https://github.com/SebLague/Chess-Challenge/issues) to see if anyone is having a similar issue. If not, post about it there with any details such as error messages, operating system etc.
+
+You can also see how my bot does on [lichess](https://lichess.org/@/AnmolS99/all)!
