@@ -7,6 +7,9 @@ using Move = ChessChallenge.API.Move;
 
 public class MyBot : IChessBot
 {
+    private const int IntMinValue = -1000000;
+    private const int IntMaxValue = 1000000;
+    
     public Move Think(Board board, Timer timer) => MiniMax(board, 6);
 
     private Move MiniMax(Board board, int depth)
@@ -15,13 +18,13 @@ public class MyBot : IChessBot
         
         Move[] moves = board.GetLegalMoves().OrderByDescending(move => move.IsCapture).ToArray();
 
-        int alpha = int.MinValue;
-        int beta = int.MaxValue;
+        int alpha = IntMinValue;
+        int beta = IntMaxValue;
 
         if (isMyBotWhite)
         {
             Move? maxValueMove = null;
-            int maxValue = int.MinValue;
+            int maxValue = IntMinValue;
 
             foreach (Move move in moves)
             {
@@ -43,7 +46,7 @@ public class MyBot : IChessBot
         else
         {
             Move? minValueMove = null;
-            int minValue = int.MaxValue;
+            int minValue = IntMaxValue;
 
             foreach (Move move in moves)
             {
@@ -73,11 +76,11 @@ public class MyBot : IChessBot
         if (board.IsDraw())
             return 0;
         if (board.IsInCheckmate())
-            return board.IsWhiteToMove ? int.MinValue : int.MaxValue;
+            return board.IsWhiteToMove ? IntMinValue - depth : IntMaxValue + depth;
         if (depth == 0)
             return EvaluateBoardState(board);
 
-        int minValue = int.MaxValue;
+        int minValue = IntMaxValue;
         foreach (Move move in board.GetLegalMoves().OrderByDescending(move => move.IsCapture).ToArray())
         {
             board.MakeMove(move);
@@ -105,11 +108,11 @@ public class MyBot : IChessBot
         if (board.IsDraw())
             return 0;
         if (board.IsInCheckmate())
-            return board.IsWhiteToMove ? int.MinValue : int.MaxValue;
+            return board.IsWhiteToMove ? IntMinValue - depth : IntMaxValue + depth;
         if (depth == 0)
             return EvaluateBoardState(board);
 
-        int maxValue = int.MinValue;
+        int maxValue = IntMinValue;
         foreach (Move move in board.GetLegalMoves().OrderByDescending(move => move.IsCapture).ToArray())
         {
             board.MakeMove(move);
