@@ -10,7 +10,7 @@ public class MyBot : IChessBot
     private const int IntMinValue = -1000000;
     private const int IntMaxValue = 1000000;
     
-    public Move Think(Board board, Timer timer) => MiniMax(board, 6);
+    public Move Think(Board board, Timer timer) => MiniMax(board, 5);
 
     private Move MiniMax(Board board, int depth)
     {

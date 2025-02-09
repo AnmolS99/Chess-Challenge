@@ -9,7 +9,7 @@ namespace ChessChallenge.Example;
 
 public class EvilBot : IChessBot
 {
-    public Move Think(Board board, Timer timer) => MiniMax(board, 6);
+    public Move Think(Board board, Timer timer) => MiniMax(board, 5);
 
     private Move MiniMax(Board board, int depth)
     {
